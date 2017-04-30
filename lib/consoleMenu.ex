@@ -1,6 +1,7 @@
 defmodule ConsoleMenu do
+  require MenuStateHandler
   alias ConsoleMenu.Formatter, as: Formatter
-  alias ConsoleMenu.InputHandler, as: ImputHandler
+  alias ConsoleMenu.InputHandler, as: InputHandler
 
   @moduledoc """
   Module to format text only menus intended to run in a console, intended for text-based games.
@@ -9,7 +10,7 @@ defmodule ConsoleMenu do
   def start_link, do:
     MenuStateHandler.start_link
 
-  def push_new_menu(menu_title, request_text // "") do
+  def push_new_menu(menu_title, request_text \\ "") do
     Formatter.format_title(menu_title)
     MenuStateHandler.push_menu([], %{title: menu_title, request_text: request_text})
   end
@@ -45,13 +46,13 @@ defmodule ConsoleMenu do
 
   def go_forward do
     MenuStateHandler.go_forward()
-    |> Formatter.formatMenu()
+    |> Formatter.format_menu()
     request_menu_selection()
   end
 
   def go_back do
     MenuStateHandler.go_back()
-    |> Formatter.formatMenu()
+    |> Formatter.format_menu()
     request_menu_selection()
   end
 
@@ -69,14 +70,14 @@ defmodule ConsoleMenu do
   end
 
   defp push_forward_item({menu, item_index}) do
-    case MenuStateHandler.can_go_forward() do
+    case MenuStateHandler.can_go_forward?() do
       false -> {menu, item_index}
       true -> {MenuStateHandler.push_menu_item(create_forward_item(item_index)), item_index + 1}
     end
   end
 
   defp push_back_item({menu, item_index}) do
-    case MenuStateHandler.can_go_backward() do
+    case MenuStateHandler.can_go_backward?() do
       false -> {menu, item_index}
       true -> {MenuStateHandler.push_menu_item(create_back_item(item_index)), item_index + 1}
     end
