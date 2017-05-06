@@ -29,7 +29,7 @@ defmodule ConsoleMenu.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
-      {:menuStateHandler, git: "https://github.com/nanaki04/MenuStateHandler.git"}
+      {:metamenu, git: "https://github.com/nanaki04/MetaMenu.git", app: false}
     ]
   end
 end

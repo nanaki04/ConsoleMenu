@@ -1,5 +1,5 @@
 defmodule ConsoleMenu do
-  require MenuStateHandler
+  require MetaMenu
   alias ConsoleMenu.Formatter, as: Formatter
   alias ConsoleMenu.InputHandler, as: InputHandler
 
@@ -7,94 +7,109 @@ defmodule ConsoleMenu do
   Module to format text only menus intended to run in a console, intended for text-based games.
   """
 
-  def start_link, do:
-    MenuStateHandler.start_link
+  @forward_item_text "Show Next Menu"
+  @back_item_text "Show Previous Menu"
 
-  def push_new_menu(menu_title, request_text \\ "") do
-    Formatter.format_title(menu_title)
-    MenuStateHandler.push_menu([], %{title: menu_title, request_text: request_text})
+  def push_menu(menu_state)  do 
+    menu_state
+    |> MetaMenu.push_menu()
+    |> MetaMenu.update_current_menu_custom_data(&(Map.put(&1, :has_forward_item?, false)))
+    |> MetaMenu.update_current_menu_custom_data(&(Map.put(&1, :has_back_item?, false)))
   end
 
-  def push_menu_item(item_name, callback) do
-    item_index = MenuStateHandler.get_current_item_length()
-    create_menu_item(item_index, item_name, callback)
-    |> Formatter.format()
+  def push_menu(menu_state, menu_title) do
+    push_menu(menu_state)
+    |> MetaMenu.set_current_menu_title(menu_title)
   end
 
-  def push_forward_and_back_items do
-    {
-      MenuStateHandler.get_current(),
-      MenuStateHandler.get_current_item_length()
-    }
+  def push_menu(menu_state, menu_title, description) do
+    push_menu(menu_state, menu_title)
+    |> MetaMenu.set_current_menu_description(description)
+  end
+
+  def pop_menu(menu_state), do:
+    MetaMenu.pop_menu(menu_state)
+
+  def render_current_menu(menu_state) do
+    Formatter.format_current_menu(menu_state)
+  end
+
+  def set_title(menu_state, title), do:
+    MetaMenu.set_current_menu_title menu_state, title
+
+  def set_description(menu_state, description), do:
+    MetaMenu.set_current_menu_description menu_state, description
+
+  def push_menu_item(menu_state) do
+    menu_state
+    |> MetaMenu.push_menu_item()
+    |> MetaMenu.update_last_menu_item_custom_data(&(Map.put(&1, :decorators, [])))
+  end
+
+  def push_menu_item(menu_state, item_text, on_select) do
+    menu_state
+    |> push_menu_item()
+    |> MetaMenu.set_last_menu_item_index()
+    |> MetaMenu.set_last_menu_item_text(item_text)
+    |> MetaMenu.set_last_menu_item_select_callback(on_select)
+  end
+
+  def go_back(menu_state) do
+    menu_state
+    |> MetaMenu.go_back()
+    |> ConsoleMenu.push_forward_item()
+  end
+
+  def go_forward(menu_state), do:
+    MetaMenu.go_forward menu_state
+
+  def push_forward_and_back_menu_items(menu_state) do
+    MetaMenu.update_last_menu_item_custom_data(menu_state, fn
+      %{decorators: []} = custom_data -> %{custom_data | decorators: [:bottom_line]}
+      custom_data -> %{custom_data | decorators: [:bottom_line | tl(custom_data.decorators)]}
+    end)
     |> push_forward_item()
     |> push_back_item()
   end
 
-  def request_menu_selection do
-    get_request_text()
-    |> InputHandler.request_menu_selection()
-    |> select_menu_item()
-  end
-
-  def select_menu_item(item_index) do
-    MenuStateHandler.get_menu_item(item_index)
-    |> case() do
-      {:error, _error_type} -> Formatter.format_invalid_selection_error()
-      %{on_select: on_select} -> on_select.()
+  def push_forward_item(menu_state) do
+    {:ok, custom_data} = MetaMenu.get_current_menu_custom_data(menu_state)
+    with true <- MetaMenu.can_go_forward?(menu_state),
+      false <- custom_data.has_forward_item?
+    do
+      menu_state
+      |> MetaMenu.update_current_menu_custom_data(&(Map.put(&1, :has_forward_item?, true)))
+      |> push_menu_item(@forward_item_text, &__MODULE__.go_forward/1)
+    else
+      _ -> menu_state
     end
   end
 
-  def go_forward do
-    MenuStateHandler.go_forward()
-    |> Formatter.format_menu()
-    request_menu_selection()
-  end
-
-  def go_back do
-    MenuStateHandler.go_back()
-    |> Formatter.format_menu()
-    request_menu_selection()
-  end
-
-  defp get_meta_data do 
-    %{meta_data: meta_data} = MenuStateHandler.get_current()
-    meta_data
-  end
-
-  defp get_request_text do
-    get_meta_data()
-    |> case() do
-      %{request_text: request_text} -> request_text
-      _meta_data -> ""
+  def push_back_item(menu_state) do
+    {:ok, custom_data} = MetaMenu.get_current_menu_custom_data(menu_state)
+    with true <- MetaMenu.can_go_backward?(menu_state),
+      false <- custom_data.has_back_item?
+    do
+      menu_state
+      |> MetaMenu.update_current_menu_custom_data(&(Map.put(&1, :has_back_item?, true)))
+      |> push_menu_item(@back_item_text, &__MODULE__.go_back/1)
+    else
+      _ -> menu_state
     end
   end
 
-  defp push_forward_item({menu, item_index}) do
-    case MenuStateHandler.can_go_forward?() do
-      false -> {menu, item_index}
-      true -> {MenuStateHandler.push_menu_item(create_forward_item(item_index)), item_index + 1}
+  def request_menu_selection(menu_state) do
+    with :error <- InputHandler.request_menu_selection() do
+      Formatter.format_error_message()
+    else
+      input -> select_menu_item(menu_state, input)
     end
   end
 
-  defp push_back_item({menu, item_index}) do
-    case MenuStateHandler.can_go_backward?() do
-      false -> {menu, item_index}
-      true -> {MenuStateHandler.push_menu_item(create_back_item(item_index)), item_index + 1}
+  def select_menu_item(menu_state, item_index) do
+    with {:error, _} <- MetaMenu.select_menu_item(menu_state, item_index) do
+      Formatter.format_error_message()
+      menu_state
     end
   end
-
-  defp create_forward_item(item_index) do
-    create_menu_item(item_index, "Next menu", fn -> ConsoleMenu.go_forward() end)
-    |> Formatter.format()
-  end
-
-  defp create_back_item(item_index) do
-    create_menu_item(item_index, "Previous menu", fn -> ConsoleMenu.go_back() end)
-    |> Formatter.format()
-  end
-
-  defp create_menu_item(item_index, item_text, on_select) do
-    %{item_index: item_index, item_text: item_text, on_select: on_select}
-  end
-
 end
