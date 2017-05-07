@@ -27,6 +27,10 @@ defmodule ConsoleMenu do
     |> MetaMenu.set_current_menu_description(description)
   end
 
+  def update_custom_data(menu_state, lambda) do
+    MetaMenu.update_current_menu_custom_data(menu_state, lambda)
+  end
+
   def pop_menu(menu_state), do:
     MetaMenu.pop_menu(menu_state)
 
