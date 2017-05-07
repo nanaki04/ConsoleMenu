@@ -9,6 +9,7 @@ defmodule ConsoleMenu.Formatter do
       IO.puts(to_string(index) <> ". " <> text)
       Enum.each(custom_data.decorators, &(apply(__MODULE__, &1, [:bottom_decorator])))
     end)
+    menu_state
   end
 
   def format_error_message() do
