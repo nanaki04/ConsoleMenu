@@ -27,15 +27,6 @@ defmodule ConsoleMenu do
     |> MetaMenu.set_current_menu_description(description)
   end
 
-  def update_custom_data(menu_state, lambda) do
-    MetaMenu.update_current_menu_custom_data(menu_state, lambda)
-  end
-
-  def get_custom_data_value(menu_state, key) do
-    with {:ok, custom_data} <- MetaMenu.get_current_menu_custom_data(menu_state), do:
-      {:ok, custom_data[key]}
-  end
-
   def pop_menu(menu_state), do:
     MetaMenu.pop_menu(menu_state)
 
@@ -55,12 +46,13 @@ defmodule ConsoleMenu do
     |> MetaMenu.update_last_menu_item_custom_data(&(Map.put(&1, :decorators, [])))
   end
 
-  def push_menu_item(menu_state, item_text, on_select) do
+  def push_menu_item(menu_state, item_text, on_select, on_select_arguments \\ []) do
     menu_state
     |> push_menu_item()
     |> MetaMenu.set_last_menu_item_index()
     |> MetaMenu.set_last_menu_item_text(item_text)
     |> MetaMenu.set_last_menu_item_select_callback(on_select)
+    |> MetaMenu.set_last_menu_item_select_arguments(on_select_arguments)
   end
 
   def go_back(menu_state) do
@@ -69,8 +61,14 @@ defmodule ConsoleMenu do
     |> ConsoleMenu.push_forward_item()
   end
 
+  def on_select_back_item(menu_state, _arguments), do:
+    go_back(menu_state)
+
   def go_forward(menu_state), do:
     MetaMenu.go_forward menu_state
+
+  def on_select_forward_item(menu_state, _arguments), do:
+    go_forward(menu_state)
 
   def push_forward_and_back_menu_items(menu_state) do
     MetaMenu.update_last_menu_item_custom_data(menu_state, fn
@@ -88,7 +86,7 @@ defmodule ConsoleMenu do
     do
       menu_state
       |> MetaMenu.update_current_menu_custom_data(&(Map.put(&1, :has_forward_item?, true)))
-      |> push_menu_item(@forward_item_text, &__MODULE__.go_forward/1)
+      |> push_menu_item(@forward_item_text, &__MODULE__.on_select_forward_item/2)
     else
       _ -> menu_state
     end
@@ -101,7 +99,7 @@ defmodule ConsoleMenu do
     do
       menu_state
       |> MetaMenu.update_current_menu_custom_data(&(Map.put(&1, :has_back_item?, true)))
-      |> push_menu_item(@back_item_text, &__MODULE__.go_back/1)
+      |> push_menu_item(@back_item_text, &__MODULE__.on_select_back_item/2)
     else
       _ -> menu_state
     end

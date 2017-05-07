@@ -27,9 +27,13 @@ defmodule ConsoleMenuTest do
     assert {:ok, ^menu_description} = MetaMenu.get_current_menu_description(menu_state)
   end
 
+  def on_select_mock(menu_state, _arguments) do
+    ConsoleMenu.go_back(menu_state)
+  end
+
   test "push_menu_item" do
     item_text = "Go Back"
-    on_select = &ConsoleMenu.go_back/1
+    on_select = &__MODULE__.on_select_mock/2
     menu_state = %MetaMenu{}
     |> ConsoleMenu.push_menu("Menu 1", "_")
     |> ConsoleMenu.push_menu()
