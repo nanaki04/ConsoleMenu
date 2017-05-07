@@ -31,6 +31,11 @@ defmodule ConsoleMenu do
     MetaMenu.update_current_menu_custom_data(menu_state, lambda)
   end
 
+  def get_custom_data_value(menu_state, key) do
+    with {:ok, custom_data} <- MetaMenu.get_current_menu_custom_data(menu_state), do:
+      {:ok, custom_data[key]}
+  end
+
   def pop_menu(menu_state), do:
     MetaMenu.pop_menu(menu_state)
 
