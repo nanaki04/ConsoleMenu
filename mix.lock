@@ -1,2 +1,2 @@
 %{"menuStateHandler": {:git, "https://github.com/nanaki04/MenuStateHandler.git", "89e9277fe15d76e61773f4b3ba0501976c000181", []},
-  "metamenu": {:git, "https://github.com/nanaki04/MetaMenu.git", "95c464464b16ab7c0c05827dde64fa8e43a387e6", []}}
+  "metamenu": {:git, "https://github.com/nanaki04/MetaMenu.git", "7c921789efd508b770c223297156f05f051c3f4e", []}}

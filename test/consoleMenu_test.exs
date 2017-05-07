@@ -43,7 +43,9 @@ defmodule ConsoleMenuTest do
       assert text === item_text
       assert custom_data.decorators === []
     end)
+    ConsoleMenu.render_current_menu(menu_state)
     menu_state = ConsoleMenu.select_menu_item(menu_state, 1)
+    |> ConsoleMenu.render_current_menu()
     assert {:ok, "Menu 1"} = MetaMenu.get_current_menu_title(menu_state)
   end
 
@@ -55,9 +57,12 @@ defmodule ConsoleMenuTest do
     |> ConsoleMenu.push_menu("Menu 2", "_")
     |> ConsoleMenu.push_menu_item()
     |> ConsoleMenu.push_forward_and_back_menu_items()
+    |> ConsoleMenu.render_current_menu()
     |> ConsoleMenu.select_menu_item(2)
+    |> ConsoleMenu.render_current_menu()
     assert {:ok, "Menu 1"} = MetaMenu.get_current_menu_title(menu_state)
     menu_state = ConsoleMenu.select_menu_item(menu_state, 2)
+    |> ConsoleMenu.render_current_menu()
     assert {:ok, "Menu 2"} = MetaMenu.get_current_menu_title(menu_state)
   end
 end
